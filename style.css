@@ -35,20 +35,6 @@ body {
   justify-content: center;
   min-height: 100vh;
   padding: 28px 16px;
-  perspective: 1200px;
-}
-
-/* ---------- Ambient 3D background ---------- */
-#bg-canvas {
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  display: block;
-}
-
-@media (max-width: 640px) {
-  #bg-canvas { display: none; }
 }
 
 /* ---------- Terminal window ---------- */
@@ -66,8 +52,7 @@ body {
   overflow: hidden;
   position: relative;
   z-index: 1;
-  transform-style: preserve-3d;
-  transition: transform 0.15s ease-out, width 0.2s ease, height 0.2s ease, max-width 0.2s ease, max-height 0.2s ease, border-radius 0.2s ease;
+  transition: width 0.2s ease, height 0.2s ease, max-width 0.2s ease, max-height 0.2s ease, border-radius 0.2s ease;
 }
 
 .terminal.maximized {
