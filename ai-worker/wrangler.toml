@@ -1,0 +1,14 @@
+name = "cv-clone-worker"
+main = "worker.js"
+compatibility_date = "2025-01-01"
+
+# Comma-separated list of origins allowed to call this worker.
+# Add your GitHub Pages origin here. Add a localhost entry too if you
+# want to test the clone-me flow from a local dev server.
+[vars]
+ALLOWED_ORIGINS = "https://sinhasumai.github.io"
+
+# After `wrangler login`, set the real secret with:
+#   wrangler secret put ANTHROPIC_API_KEY
+# Do NOT put the key itself in this file — secrets are stored separately
+# by Cloudflare and never appear in your repo.

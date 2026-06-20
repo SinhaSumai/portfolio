@@ -35,6 +35,20 @@ body {
   justify-content: center;
   min-height: 100vh;
   padding: 28px 16px;
+  perspective: 1200px;
+}
+
+/* ---------- Ambient 3D background ---------- */
+#bg-canvas {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  display: block;
+}
+
+@media (max-width: 640px) {
+  #bg-canvas { display: none; }
 }
 
 /* ---------- Terminal window ---------- */
@@ -50,7 +64,10 @@ body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  transition: width 0.2s ease, height 0.2s ease, max-width 0.2s ease, max-height 0.2s ease, border-radius 0.2s ease;
+  position: relative;
+  z-index: 1;
+  transform-style: preserve-3d;
+  transition: transform 0.15s ease-out, width 0.2s ease, height 0.2s ease, max-width 0.2s ease, max-height 0.2s ease, border-radius 0.2s ease;
 }
 
 .terminal.maximized {
@@ -443,6 +460,63 @@ body.matrix-active .terminal { opacity: 0.15; transition: opacity 0.3s ease; }
   --accent: #5fb3ff;
   --accent-dim: #2f6fa3;
   --accent-soft: rgba(95, 179, 255, 0.12);
+}
+
+/* ---------- AI clone-me preview overlay ---------- */
+.clone-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(0, 0, 0, 0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 28px 16px;
+  animation: fadein 0.18s ease-out;
+}
+
+.clone-window {
+  width: 100%;
+  max-width: 900px;
+  height: 80vh;
+  max-height: 700px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 30px 80px -20px rgba(0, 0, 0, 0.8);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.clone-tabs { background: var(--panel); }
+.clone-tabs button::before { content: "#"; color: var(--text-faint); margin-right: 5px; }
+
+.clone-screen {
+  flex: 1;
+  overflow-y: auto;
+  padding: 18px 20px;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.clone-screen::-webkit-scrollbar { width: 9px; }
+.clone-screen::-webkit-scrollbar-track { background: transparent; }
+.clone-screen::-webkit-scrollbar-thumb { background: var(--border); border-radius: 6px; }
+
+.clone-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 12px 20px 16px;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+@media (max-width: 640px) {
+  .clone-overlay { padding: 0; }
+  .clone-window { height: 100vh; max-height: none; border-radius: 0; border: none; }
+  .clone-screen { padding: 14px; font-size: 13.5px; }
+  .clone-actions { flex-wrap: wrap; }
 }
 
 /* ---------- Responsive ---------- */

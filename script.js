@@ -4,6 +4,7 @@
    file needs to change.
    ========================================================= */
 
+/* DATA_START */
 const DATA = {
   name: "Sumaiya Sinha",
   title: "ML Engineer — Computer Vision · Multimodal AI · NLP",
@@ -138,41 +139,45 @@ and fine-tuning to inference optimization and automation infrastructure.`,
     { label: "Tools & Infra", items: ["Git", "Linux", "VS Code", "Roboflow", "Anaconda", "Make/Integromat", "Google Sheets API"] }
   ]
 };
+/* DATA_END */
 
 /* Feature flags — flip to false to pull a feature without touching
    anything else in the file. */
-const FEATURES = {
-  githubStats: true
-};
+const FEATURES = { githubStats: true, hasResume: true, aiClone: false };
+
+/* Cloudflare Worker endpoint for the AI "clone-me" feature.
+   Replace with your deployed worker URL (see ai-worker/ for the backend code). */
+const AI_WORKER_URL = "https://YOUR-WORKER-SUBDOMAIN.workers.dev/extract";
 
 /* =========================================================
    Rendering helpers
    ========================================================= */
 
-function renderAbout() {
+function renderAbout(d = DATA) {
   return `
     <div class="out">
-      <p style="color:var(--text);font-size:16px;font-weight:600;margin-bottom:2px;">${DATA.name}</p>
-      <p class="muted" style="margin-bottom:10px;">${DATA.title}</p>
-      <p class="muted">${DATA.location} · ${DATA.status}</p>
-      <p style="margin-top:12px;white-space:pre-line;">${DATA.about}</p>
+      <p style="color:var(--text);font-size:16px;font-weight:600;margin-bottom:2px;">${d.name}</p>
+      <p class="muted" style="margin-bottom:10px;">${d.title}</p>
+      <p class="muted">${d.location} · ${d.status}</p>
+      <p style="margin-top:12px;white-space:pre-line;">${d.about}</p>
       <div class="links-row">
-        <a href="${DATA.github}" target="_blank" rel="noopener">github.com/SinhaSumai</a>
-        <a href="${DATA.linkedin}" target="_blank" rel="noopener">linkedin</a>
-        <a href="${DATA.scholar}" target="_blank" rel="noopener">google scholar</a>
-        <a href="mailto:${DATA.email}">${DATA.email}</a>
+        ${d.github ? `<a href="${d.github}" target="_blank" rel="noopener">${d.github.replace("https://", "")}</a>` : ""}
+        ${d.linkedin ? `<a href="${d.linkedin}" target="_blank" rel="noopener">linkedin</a>` : ""}
+        ${d.scholar ? `<a href="${d.scholar}" target="_blank" rel="noopener">google scholar</a>` : ""}
+        ${d.email ? `<a href="mailto:${d.email}">${d.email}</a>` : ""}
       </div>
       <p class="muted" style="margin-top:14px;">Type <span class="fileref" data-run="help">help</span> to see all commands, or <span class="fileref" data-run="projects">projects</span> to jump straight to the work.</p>
     </div>`;
 }
 
-function renderProjects() {
-  const cards = DATA.projects.map(p => `
+function renderProjects(d = DATA) {
+  if (!d.projects.length) return `<div class="out"><h2>Projects</h2><p class="muted">nothing here yet.</p></div>`;
+  const cards = d.projects.map(p => `
     <div class="card" data-card="${p.id}">
       <div class="card-title">${p.title}</div>
       <div class="card-tag">${p.tag}</div>
-      <ul>${p.bullets.map(b => `<li>${b}</li>`).join("")}</ul>
-      ${p.metrics.length ? `<div class="metric-row">${p.metrics.map(m => `<span class="metric">${m}</span>`).join("")}</div>` : ""}
+      <ul>${(p.bullets || []).map(b => `<li>${b}</li>`).join("")}</ul>
+      ${(p.metrics || []).length ? `<div class="metric-row">${p.metrics.map(m => `<span class="metric">${m}</span>`).join("")}</div>` : ""}
       ${p.note ? `<p class="muted" style="font-size:12px;margin-top:8px;">${p.note}</p>` : ""}
       ${p.cite ? `<div class="cite">${p.cite}</div>` : ""}
     </div>
@@ -180,21 +185,23 @@ function renderProjects() {
   return `<div class="out"><h2>Projects</h2><div class="project-grid">${cards}</div></div>`;
 }
 
-function renderExperience() {
-  const items = DATA.experience.map(e => `
+function renderExperience(d = DATA) {
+  if (!d.experience.length) return `<div class="out"><h2>Experience &amp; Research</h2><p class="muted">nothing here yet.</p></div>`;
+  const items = d.experience.map(e => `
     <div class="tl-item">
       <div class="tl-date">${e.date}</div>
       <div class="tl-role">${e.role}</div>
       <div class="tl-org">${e.org}</div>
       <p class="tl-desc">${e.desc}</p>
-      ${e.links.length ? e.links.map(id => `<span class="tl-link fileref" data-goto="${id}">view project →</span>`).join("  ") : ""}
+      ${(e.links || []).length ? e.links.map(id => `<span class="tl-link fileref" data-goto="${id}">view project →</span>`).join("  ") : ""}
     </div>
   `).join("");
   return `<div class="out"><h2>Experience &amp; Research</h2><div class="timeline">${items}</div></div>`;
 }
 
-function renderEducation() {
-  const ed = DATA.education;
+function renderEducation(d = DATA) {
+  const ed = d.education;
+  if (!ed || !ed.school) return `<div class="out"><h2>Education</h2><p class="muted">nothing here yet.</p></div>`;
   return `
     <div class="out">
       <h2>Education</h2>
@@ -202,58 +209,61 @@ function renderEducation() {
         <div class="edu-degree">${ed.degree}</div>
         <div class="edu-meta">${ed.school} · ${ed.date} · ${ed.gpa}</div>
         <p class="muted">${ed.honors}</p>
-        <div class="tag-list">${ed.coursework.map(c => `<span class="tag">${c}</span>`).join("")}</div>
+        <div class="tag-list">${(ed.coursework || []).map(c => `<span class="tag">${c}</span>`).join("")}</div>
       </div>
     </div>`;
 }
 
-function renderSkills() {
-  const groups = DATA.skills.map(g => `
+function renderSkills(d = DATA) {
+  if (!d.skills.length) return `<div class="out"><h2>Skills</h2><p class="muted">nothing here yet.</p></div>`;
+  const groups = d.skills.map(g => `
     <div class="skill-group">
       <div class="skill-group-label">${g.label}</div>
-      <div class="chips">${g.items.map(i => `<span class="chip">${i}</span>`).join("")}</div>
+      <div class="chips">${(g.items || []).map(i => `<span class="chip">${i}</span>`).join("")}</div>
     </div>
   `).join("");
   return `<div class="out"><h2>Skills</h2>${groups}</div>`;
 }
 
-function renderContact() {
+function renderContact(d = DATA) {
   return `
     <div class="out">
       <h2>Contact</h2>
       <div class="contact-list">
-        <div class="row"><span class="k">email</span><a href="mailto:${DATA.email}">${DATA.email}</a> <button class="btn" data-copy="${DATA.email}" style="margin-left:8px;">copy</button></div>
-        <div class="row"><span class="k">github</span><a href="${DATA.github}" target="_blank" rel="noopener">${DATA.github.replace("https://", "")}</a></div>
-        <div class="row"><span class="k">linkedin</span><a href="${DATA.linkedin}" target="_blank" rel="noopener">linkedin.com/in/sumaiya-sinha</a></div>
-        <div class="row"><span class="k">scholar</span><a href="${DATA.scholar}" target="_blank" rel="noopener">google scholar</a></div>
-        <div class="row"><span class="k">location</span><span class="muted">${DATA.location} · ${DATA.status}</span></div>
+        ${d.email ? `<div class="row"><span class="k">email</span><a href="mailto:${d.email}">${d.email}</a> <button class="btn" data-copy="${d.email}" style="margin-left:8px;">copy</button></div>` : ""}
+        ${d.github ? `<div class="row"><span class="k">github</span><a href="${d.github}" target="_blank" rel="noopener">${d.github.replace("https://", "")}</a></div>` : ""}
+        ${d.linkedin ? `<div class="row"><span class="k">linkedin</span><a href="${d.linkedin}" target="_blank" rel="noopener">${d.linkedin.replace("https://", "")}</a></div>` : ""}
+        ${d.scholar ? `<div class="row"><span class="k">scholar</span><a href="${d.scholar}" target="_blank" rel="noopener">google scholar</a></div>` : ""}
+        <div class="row"><span class="k">location</span><span class="muted">${d.location} · ${d.status}</span></div>
       </div>
     </div>`;
 }
 
 function renderHelp() {
-  const rows = [
+  const helpRows = [
     ["about", "profile & quick facts"],
     ["projects", "selected engineering & research projects"],
     ["experience", "work & research timeline"],
     ["education", "degree, honors, coursework"],
     ["skills", "languages, frameworks, tools"],
-    ["contact", "how to reach me"],
-    ["resume", "download the pdf resume"],
-    ["sysinfo", "neofetch-style system info"],
-    ["theme <name>", "switch color theme: green / amber / blue"],
-    ["matrix", "toggle the matrix rain (Esc to exit)"],
-    ["ls", "list available sections"],
-    ["whoami", "one-line bio"],
-    ["clear", "clear the screen"],
-    ["help", "show this message"]
+    ["contact", "how to reach me"]
   ];
-  if (FEATURES.githubStats) rows.splice(7, 0, ["github", "live github stats"]);
-  return `<div class="out"><h2>Available commands</h2><div class="help-table">${rows.map(([c, d]) => {
-    const runnable = !c.includes(" ");
-    return `<span class="cmd${runnable ? " fileref" : ""}"${runnable ? ` data-run="${c}"` : ""}>${c}</span><span class="desc">${d}</span>`;
-  }).join("")}</div>
-  <p class="muted" style="margin-top:12px;">Tip: the tabs above the prompt run the same commands — every plain command name above is clickable too. There may be a couple more commands not listed here.</p></div>`;
+  if (FEATURES.hasResume) helpRows.push(["resume", "download the pdf resume"]);
+  if (FEATURES.githubStats) helpRows.push(["github", "live github stats"]);
+  helpRows.push(["sysinfo", "neofetch-style system info"]);
+  helpRows.push(["matrix", "toggle the matrix rain (Esc to exit)"]);
+  if (FEATURES.aiClone) helpRows.push(["clone-me", "upload a cv, get your own ai-generated version of this site"]);
+  helpRows.push(["ls", "list available sections"]);
+  helpRows.push(["whoami", "one-line bio"]);
+  helpRows.push(["clear", "clear the screen"]);
+  helpRows.push(["help", "show this message"]);
+
+  const table = rows => `<div class="help-table">${rows.map(([c, desc]) => {
+    return `<span class="cmd fileref" data-run="${c}">${c}</span><span class="desc">${desc}</span>`;
+  }).join("")}</div>`;
+
+  return `<div class="out">${table(helpRows)}
+    <p class="muted" style="margin-top:12px;">Tip: the tabs above the prompt run the same commands — every plain command name above is clickable too.</p></div>`;
 }
 
 function renderLs() {
@@ -283,7 +293,7 @@ function renderSysinfo() {
 
   const specs = [
     ["user", "sumaiya@portfolio"],
-    ["os", "BengalByteOS (web)"],
+    ["os", "SumaiyaOS (web)"],
     ["host", DATA.location],
     ["shell", "fake-bash 5.2"],
     ["languages", "Python, JavaScript"],
@@ -353,11 +363,14 @@ const COMMANDS = {
     return turningOn
       ? `<div class="out"><p class="accent">entering the matrix...</p><p class="muted">type 'matrix' again or press Esc to exit.</p></div>`
       : `<div class="out"><p class="muted">back to reality.</p></div>`;
-  },
-  resume: () => { downloadResume(); return `<div class="out"><p class="muted">Downloading resume.pdf…</p></div>`; },
-  download: () => { downloadResume(); return `<div class="out"><p class="muted">Downloading resume.pdf…</p></div>`; },
-  "download resume": () => { downloadResume(); return `<div class="out"><p class="muted">Downloading resume.pdf…</p></div>`; }
+  }
 };
+
+if (FEATURES.hasResume) {
+  COMMANDS.resume = () => { downloadResume(); return `<div class="out"><p class="muted">Downloading resume.pdf…</p></div>`; };
+  COMMANDS.download = () => { downloadResume(); return `<div class="out"><p class="muted">Downloading resume.pdf…</p></div>`; };
+  COMMANDS["download resume"] = COMMANDS.download;
+}
 
 if (FEATURES.githubStats) {
   COMMANDS.github = () => {
@@ -365,6 +378,11 @@ if (FEATURES.githubStats) {
     loadGithubStats(loadingId);
     return `<div class="out" id="${loadingId}"><p class="muted">fetching live github stats…</p></div>`;
   };
+}
+
+if (FEATURES.aiClone) {
+  COMMANDS["clone-me"] = () => { runCloneMe(); return ""; };
+  COMMANDS.generate = COMMANDS["clone-me"];
 }
 
 let history = [];
@@ -471,6 +489,17 @@ function getCompletionPool() {
 }
 
 input.addEventListener("keydown", e => {
+  if (pendingAnswer) {
+    if (e.key === "Enter") {
+      const val = input.value;
+      printCommandLine(val);
+      input.value = "";
+      const resolve = pendingAnswer;
+      pendingAnswer = null;
+      resolve(val);
+    }
+    return;
+  }
   if (e.key === "Enter") {
     const val = input.value;
     runCommand(val);
@@ -658,6 +687,90 @@ function setTheme(name) {
   } else {
     document.documentElement.setAttribute("data-theme", name);
   }
+  updateBgAccentColor();
+}
+
+/* =========================================================
+   Ambient 3D background (Three.js wireframe) + cursor tilt
+   Purely decorative — fails silently and never blocks input.
+   ========================================================= */
+
+const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+function getAccentColor() {
+  return (getComputedStyle(document.documentElement).getPropertyValue("--accent") || "#4ade80").trim();
+}
+
+let bgScene = null; // { renderer, scene, camera, mesh }
+
+function updateBgAccentColor() {
+  if (bgScene) bgScene.mesh.material.color.set(getAccentColor());
+}
+
+async function initBgScene() {
+  if (prefersReducedMotion || window.innerWidth <= 640) return;
+  const canvas = document.getElementById("bg-canvas");
+  if (!canvas || typeof THREE === "undefined") {
+    try {
+      await loadScript("https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js");
+    } catch (err) {
+      return; // decorative only — skip quietly if the CDN is unreachable
+    }
+  }
+  if (!canvas || typeof THREE === "undefined") return;
+
+  const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.setSize(window.innerWidth, window.innerHeight);
+
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+  camera.position.z = 9;
+
+  const geometry = new THREE.IcosahedronGeometry(3.2, 1);
+  const material = new THREE.MeshBasicMaterial({ color: getAccentColor(), wireframe: true, transparent: true, opacity: 0.35 });
+  const mesh = new THREE.Mesh(geometry, material);
+  scene.add(mesh);
+
+  bgScene = { renderer, scene, camera, mesh };
+
+  let mouseX = 0, mouseY = 0;
+  window.addEventListener("mousemove", e => {
+    mouseX = e.clientX / window.innerWidth - 0.5;
+    mouseY = e.clientY / window.innerHeight - 0.5;
+  });
+
+  window.addEventListener("resize", () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+
+  (function animate() {
+    requestAnimationFrame(animate);
+    if (document.hidden) return;
+    mesh.rotation.y += 0.0025 + (mouseX * 0.4 - mesh.rotation.y) * 0.01;
+    mesh.rotation.x += 0.0012 + (mouseY * 0.4 - mesh.rotation.x) * 0.01;
+    renderer.render(scene, camera);
+  })();
+}
+
+initBgScene();
+
+/* ---------- Cursor-reactive terminal tilt (CSS-only transform) ---------- */
+
+if (!prefersReducedMotion) {
+  document.addEventListener("mousemove", e => {
+    if (window.innerWidth <= 640) return;
+    if (terminalEl.classList.contains("dragging") || terminalEl.classList.contains("maximized")) return;
+    const rect = terminalEl.getBoundingClientRect();
+    const dx = (e.clientX - (rect.left + rect.width / 2)) / (rect.width / 2);
+    const dy = (e.clientY - (rect.top + rect.height / 2)) / (rect.height / 2);
+    const max = 4; // degrees
+    const rotateY = Math.max(-1, Math.min(1, dx)) * max;
+    const rotateX = Math.max(-1, Math.min(1, -dy)) * max;
+    terminalEl.style.transform = `rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+  });
 }
 
 /* ---------- Matrix rain (toggle on/off) ---------- */
@@ -725,12 +838,22 @@ document.addEventListener("keydown", e => {
 
 /* ---------- Live GitHub stats ---------- */
 
+function getGithubUsername(d = DATA) {
+  try { return new URL(d.github).pathname.replace(/\//g, ""); } catch { return ""; }
+}
+
 async function loadGithubStats(targetId) {
+  const username = getGithubUsername();
+  if (!username) {
+    const el = document.getElementById(targetId);
+    if (el) el.innerHTML = `<p class="muted">no github link on file — see <span class="fileref" data-run="contact">contact</span>.</p>`;
+    return;
+  }
   try {
-    const res = await fetch("https://api.github.com/users/SinhaSumai");
+    const res = await fetch(`https://api.github.com/users/${username}`);
     if (!res.ok) throw new Error("bad response");
     const user = await res.json();
-    const reposRes = await fetch("https://api.github.com/users/SinhaSumai/repos?sort=updated&per_page=1");
+    const reposRes = await fetch(`https://api.github.com/users/${username}/repos?sort=updated&per_page=1`);
     const repos = reposRes.ok ? await reposRes.json() : [];
     const latest = repos[0];
     const el = document.getElementById(targetId);
@@ -747,6 +870,255 @@ async function loadGithubStats(targetId) {
     const el = document.getElementById(targetId);
     if (el) el.innerHTML = `<p class="muted">couldn't reach the github api right now — see <span class="fileref" data-run="contact">contact</span> for the link directly.</p>`;
   }
+}
+
+/* =========================================================
+   AI clone-me — upload a CV, get your own version of this site
+   ========================================================= */
+
+let pendingAnswer = null;
+
+function askInTerminal(promptText) {
+  return new Promise(resolve => {
+    const div = document.createElement("div");
+    div.className = "out";
+    div.innerHTML = `<p class="accent">${escapeHtml(promptText)}</p>`;
+    screen.appendChild(div);
+    scrollToBottom();
+    pendingAnswer = resolve;
+  });
+}
+
+function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    if (document.querySelector(`script[src="${src}"]`)) return resolve();
+    const s = document.createElement("script");
+    s.src = src;
+    s.onload = () => resolve();
+    s.onerror = () => reject(new Error("failed to load " + src));
+    document.head.appendChild(s);
+  });
+}
+
+function triggerCvUpload() {
+  return new Promise(resolve => {
+    const fileInput = document.createElement("input");
+    fileInput.type = "file";
+    fileInput.accept = "application/pdf";
+    fileInput.style.display = "none";
+    document.body.appendChild(fileInput);
+    fileInput.addEventListener("change", () => {
+      const file = fileInput.files[0] || null;
+      fileInput.remove();
+      resolve(file);
+    }, { once: true });
+    fileInput.click();
+  });
+}
+
+async function extractPdfText(file) {
+  await loadScript("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js");
+  pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+  const buf = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+  let text = "";
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    text += content.items.map(it => it.str).join(" ") + "\n";
+  }
+  return text;
+}
+
+function buildCloneData(p) {
+  return {
+    name: p.name || "Your Name",
+    title: p.title || "Your Title",
+    location: p.location || "",
+    status: p.status || "",
+    email: p.email || "",
+    github: p.github || "",
+    linkedin: p.linkedin || "",
+    scholar: p.scholar || "",
+    about: p.about || "",
+    projects: Array.isArray(p.projects) ? p.projects.map(pr => ({ bullets: [], metrics: [], ...pr })) : [],
+    experience: Array.isArray(p.experience) ? p.experience.map(e => ({ links: [], ...e })) : [],
+    education: p.education && p.education.school ? p.education : { school: "", degree: "", date: "", gpa: "", honors: "", coursework: [] },
+    skills: Array.isArray(p.skills) ? p.skills : []
+  };
+}
+
+const CLONE_THEME_VARS = {
+  green: { "--accent": "#4ade80", "--accent-dim": "#2f8f5b", "--accent-soft": "rgba(74, 222, 128, 0.12)" },
+  amber: { "--accent": "#f3b13c", "--accent-dim": "#a87a22", "--accent-soft": "rgba(243, 177, 60, 0.12)" },
+  blue: { "--accent": "#5fb3ff", "--accent-dim": "#2f6fa3", "--accent-soft": "rgba(95, 179, 255, 0.12)" }
+};
+
+async function runCloneMe() {
+  if (!AI_WORKER_URL || AI_WORKER_URL.includes("YOUR-WORKER-SUBDOMAIN")) {
+    printOutputHTML(`<div class="out"><p class="err">the AI backend isn't deployed yet.</p><p class="muted">set AI_WORKER_URL in script.js once the Cloudflare Worker is live.</p></div>`);
+    scrollToBottom();
+    return;
+  }
+
+  printOutputHTML(`<div class="out"><p class="accent">clone-me</p><p class="muted">upload your CV (PDF) and I'll ask a couple of quick questions, then generate your own version of this site.</p></div>`);
+  scrollToBottom();
+
+  const file = await triggerCvUpload();
+  if (!file) {
+    printOutputHTML(`<div class="out"><p class="muted">no file selected — canceled.</p></div>`);
+    scrollToBottom();
+    return;
+  }
+
+  printOutputHTML(`<div class="out"><p class="muted">reading ${escapeHtml(file.name)}…</p></div>`);
+  scrollToBottom();
+
+  let cvText;
+  try {
+    cvText = await extractPdfText(file);
+  } catch (err) {
+    printOutputHTML(`<div class="out"><p class="err">couldn't read that PDF — try a different export.</p></div>`);
+    scrollToBottom();
+    return;
+  }
+
+  if (!cvText.trim()) {
+    printOutputHTML(`<div class="out"><p class="err">that PDF didn't have any extractable text (likely a scanned image). try a text-based PDF export.</p></div>`);
+    scrollToBottom();
+    return;
+  }
+
+  printOutputHTML(`<div class="out"><p class="muted">asking the AI to read your CV…</p></div>`);
+  scrollToBottom();
+
+  let data;
+  try {
+    const res = await fetch(AI_WORKER_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ cvText: cvText.slice(0, 20000) })
+    });
+    if (!res.ok) throw new Error("bad response");
+    data = await res.json();
+  } catch (err) {
+    printOutputHTML(`<div class="out"><p class="err">the AI backend didn't respond — try again in a bit.</p></div>`);
+    scrollToBottom();
+    return;
+  }
+
+  const profile = data.profile || {};
+  const questions = Array.isArray(data.questions) ? data.questions.slice(0, 5) : [];
+  let cloneTheme = "green";
+
+  for (const q of questions) {
+    if (!q || !q.prompt) continue;
+    const answer = await askInTerminal(q.prompt);
+    if (!answer || !answer.trim()) continue;
+    if (q.field === "theme") {
+      const t = answer.trim().toLowerCase();
+      cloneTheme = ["green", "amber", "blue"].includes(t) ? t : "green";
+    } else if (q.field) {
+      profile[q.field] = answer.trim();
+    }
+  }
+
+  printOutputHTML(`<div class="out"><p class="muted">generating your site…</p></div>`);
+  scrollToBottom();
+
+  renderClonePreview(buildCloneData(profile), cloneTheme);
+}
+
+function renderClonePreview(cloneData, cloneTheme) {
+  const overlay = document.createElement("div");
+  overlay.className = "clone-overlay";
+  overlay.innerHTML = `
+    <div class="clone-window">
+      <div class="titlebar">
+        <div class="dots"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span></div>
+        <div class="titlebar-title">${escapeHtml((cloneData.name || "you").toLowerCase().replace(/\s+/g, ""))}@portfolio: ~</div>
+        <div class="titlebar-spacer" aria-hidden="true"></div>
+      </div>
+      <nav class="tabs clone-tabs">
+        <button data-clone-cmd="about" class="active">about</button>
+        <button data-clone-cmd="projects">projects</button>
+        <button data-clone-cmd="experience">experience</button>
+        <button data-clone-cmd="education">education</button>
+        <button data-clone-cmd="skills">skills</button>
+        <button data-clone-cmd="contact">contact</button>
+      </nav>
+      <main class="screen clone-screen"></main>
+      <div class="clone-actions">
+        <button class="btn" data-clone-action="download">⬇ download my site</button>
+        <button class="btn" data-clone-action="close" style="background:transparent;color:var(--text-dim);border:1px solid var(--border);">close preview</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+
+  const vars = CLONE_THEME_VARS[cloneTheme] || CLONE_THEME_VARS.green;
+  Object.entries(vars).forEach(([k, v]) => overlay.style.setProperty(k, v));
+
+  const cloneScreen = overlay.querySelector(".clone-screen");
+  const renderers = { about: renderAbout, projects: renderProjects, experience: renderExperience, education: renderEducation, skills: renderSkills, contact: renderContact };
+
+  function showClone(section) {
+    overlay.querySelectorAll("[data-clone-cmd]").forEach(b => b.classList.toggle("active", b.dataset.cloneCmd === section));
+    cloneScreen.innerHTML = renderers[section](cloneData);
+  }
+  overlay.querySelectorAll("[data-clone-cmd]").forEach(btn => {
+    btn.addEventListener("click", () => showClone(btn.dataset.cloneCmd));
+  });
+  overlay.addEventListener("click", e => {
+    const action = e.target.closest("[data-clone-action]");
+    if (!action) return;
+    if (action.dataset.cloneAction === "close") overlay.remove();
+    if (action.dataset.cloneAction === "download") downloadCloneBundle(cloneData, cloneTheme);
+  });
+  showClone("about");
+
+  printOutputHTML(`<div class="out"><p class="accent">done!</p><p class="muted">your preview opened above — click "download my site" to get the files, then push them to your own GitHub Pages repo the same way this one is hosted.</p></div>`);
+  scrollToBottom();
+}
+
+async function downloadCloneBundle(cloneData, cloneTheme) {
+  try {
+    await loadScript("https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js");
+  } catch (err) {
+    alert("couldn't load the zip library — check your connection and try again.");
+    return;
+  }
+
+  const [htmlSrc, cssSrc, jsSrc] = await Promise.all([
+    fetch("index.html").then(r => r.text()),
+    fetch("style.css").then(r => r.text()),
+    fetch("script.js").then(r => r.text())
+  ]);
+
+  const newDataBlock = "/* DATA_START */\nconst DATA = " + JSON.stringify(cloneData, null, 2) + ";\n/* DATA_END */";
+  let outJs = jsSrc.replace(/\/\* DATA_START \*\/[\s\S]*?\/\* DATA_END \*\//, newDataBlock);
+
+  const newFeaturesBlock = `const FEATURES = ${JSON.stringify({ githubStats: true, hasResume: false, aiClone: false })};`;
+  outJs = outJs.replace(/const FEATURES = \{[^}]*\};/, newFeaturesBlock);
+
+  outJs += `\nsetTheme(${JSON.stringify(cloneTheme || "green")});\n`;
+
+  const safeName = (cloneData.name || "my-portfolio").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "my-portfolio";
+  const outHtml = htmlSrc
+    .replace(/<title>.*<\/title>/, `<title>${escapeHtml(cloneData.name || "My")} — Portfolio</title>`)
+    .replace(/sumaiya@portfolio/g, `${safeName}@portfolio`);
+
+  const zip = new JSZip();
+  zip.file("index.html", outHtml);
+  zip.file("style.css", cssSrc);
+  zip.file("script.js", outJs);
+  const blob = await zip.generateAsync({ type: "blob" });
+
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `${safeName}-portfolio.zip`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
 }
 
 /* ---------- Boot sequence ---------- */
